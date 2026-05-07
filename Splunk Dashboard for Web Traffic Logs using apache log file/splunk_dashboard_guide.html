@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Splunk Web Traffic Dashboard — by Somesh</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg2: #111827;
+    --bg3: #1a2235;
+    --card: #151e2e;
+    --border: rgba(99,179,237,0.15);
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --accent3: #34d399;
+    --warn: #f59e0b;
+    --danger: #f87171;
+    --success: #34d399;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0b0f1a 0%, #0f172a 50%, #0b1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 70%);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(129,140,248,0.06) 0%, transparent 70%);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.3);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #e2e8f0 30%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    color: #94a3b8;
+    font-size: 16px;
+    max-width: 600px;
+    margin-bottom: 30px;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .meta-item span.dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent3);
+    display: inline-block;
+  }
+  .meta-item strong { color: var(--text); }
+
+  /* LAYOUT */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* SIDEBAR NAV */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    min-height: 100vh;
+  }
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 32px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px;
+    margin-bottom: 12px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    font-size: 13px;
+    color: #94a3b8;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .nav-item:hover { color: var(--accent); background: rgba(56,189,248,0.05); border-left-color: var(--accent); }
+  .nav-item.active { color: var(--accent); background: rgba(56,189,248,0.08); border-left-color: var(--accent); }
+  .nav-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(56,189,248,0.15);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* MAIN CONTENT */
+  .main { padding: 40px 48px; }
+
+  /* SECTION */
+  .section { margin-bottom: 60px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .icon-blue { background: rgba(56,189,248,0.12); }
+  .icon-purple { background: rgba(129,140,248,0.12); }
+  .icon-green { background: rgba(52,211,153,0.12); }
+  .icon-amber { background: rgba(245,158,11,0.12); }
+  .icon-red { background: rgba(248,113,113,0.12); }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* STEPS */
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+  .step {
+    display: flex;
+    gap: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .step:hover { border-color: rgba(56,189,248,0.3); }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(56,189,248,0.12);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: #94a3b8; }
+
+  /* PANEL CARDS */
+  .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .panel-card:hover { border-color: rgba(56,189,248,0.35); transform: translateY(-2px); }
+  .panel-card.full { grid-column: 1 / -1; }
+  .panel-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+  .type-single { background: rgba(56,189,248,0.1); color: var(--accent); border: 1px solid rgba(56,189,248,0.25); }
+  .type-bar { background: rgba(129,140,248,0.1); color: var(--accent2); border: 1px solid rgba(129,140,248,0.25); }
+  .type-map { background: rgba(52,211,153,0.1); color: var(--accent3); border: 1px solid rgba(52,211,153,0.25); }
+
+  .panel-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .panel-goal { font-size: 13px; color: #94a3b8; margin-bottom: 14px; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid rgba(99,179,237,0.12);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 14px 0;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(99,179,237,0.1);
+  }
+  .code-lang {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .copy-btn {
+    background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.2);
+    color: var(--accent);
+    font-size: 11px;
+    font-family: 'Sora', sans-serif;
+    padding: 3px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: rgba(56,189,248,0.18); }
+  .copy-btn.copied { color: var(--success); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); }
+  pre {
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: #cdd9e5;
+  }
+  .kw { color: #79c0ff; }   /* keyword */
+  .fn { color: #d2a8ff; }   /* function/command */
+  .str { color: #a5d6ff; }  /* string */
+  .op { color: #ff7b72; }   /* operator */
+  .cm { color: #8b949e; font-style: italic; }  /* comment */
+  .val { color: #56d364; }  /* value */
+
+  /* ALERT BOXES */
+  .alert {
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin: 14px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: #fcd34d; }
+  .alert-info { background: rgba(56,189,248,0.07); border: 1px solid rgba(56,189,248,0.2); color: #7dd3fc; }
+  .alert-success { background: rgba(52,211,153,0.07); border: 1px solid rgba(52,211,153,0.2); color: #6ee7b7; }
+  .alert-danger { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.2); color: #fca5a5; }
+
+  /* TABLE */
+  .tbl-wrap { border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: rgba(56,189,248,0.06);
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 11px 16px;
+    font-size: 13px;
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(99,179,237,0.06);
+    vertical-align: top;
+  }
+  td:first-child { color: var(--text); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(56,189,248,0.03); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 28px 0;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; }
+  .c-blue { color: var(--accent); }
+  .c-green { color: var(--success); }
+  .c-red { color: var(--danger); }
+  .c-amber { color: var(--warn); }
+
+  /* FOLDER STRUCTURE */
+  .folder {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+  }
+  .f-dir { color: var(--accent); }
+  .f-file { color: #94a3b8; }
+  .f-note { color: var(--muted); font-style: italic; }
+  .f-arrow { color: var(--muted); }
+
+  /* OUTCOME PILLS */
+  .outcomes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .outcome-pill {
+    background: rgba(129,140,248,0.1);
+    border: 1px solid rgba(129,140,248,0.2);
+    color: var(--accent2);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 32px 48px;
+    text-align: center;
+  }
+  .footer-name { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .footer-sub { font-size: 13px; color: var(--muted); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+  /* inline code */
+  code {
+    background: rgba(56,189,248,0.1);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 24px 20px; }
+    .panel-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .hero { padding: 40px 20px 32px; }
+    .hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">📊 Splunk Project Guide</div>
+  <h1>Web Traffic Dashboard<br>using Apache Logs</h1>
+  <p>A complete hands-on project to build a real-time web analytics dashboard in Splunk Enterprise — from dataset upload to geographic traffic maps.</p>
+  <div class="meta-row">
+    <div class="meta-item"><span class="dot"></span> <strong>Author:</strong>&nbsp;Somesh</div>
+    <div class="meta-item"><span class="dot"></span> <strong>Tool:</strong>&nbsp;Splunk Enterprise 10.2.2</div>
+    <div class="meta-item"><span class="dot"></span> <strong>Dataset:</strong>&nbsp;apache_logs.json</div>
+    <div class="meta-item"><span class="dot"></span> <strong>Level:</strong>&nbsp;Beginner–Intermediate</div>
+  </div>
+</div>
+
+<!-- LAYOUT: SIDEBAR + MAIN -->
+<div class="layout">
+
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar">
+    <div class="sidebar-label">Contents</div>
+    <a class="nav-item active" href="#overview"><div class="nav-num">0</div> Overview</a>
+    <a class="nav-item" href="#prereq"><div class="nav-num">1</div> Prerequisites</a>
+    <a class="nav-item" href="#upload"><div class="nav-num">2</div> Upload Dataset</a>
+    <a class="nav-item" href="#dashboard"><div class="nav-num">3</div> Create Dashboard</a>
+    <a class="nav-item" href="#time"><div class="nav-num">4</div> Time Range Filter</a>
+    <a class="nav-item" href="#task1"><div class="nav-num">5</div> Task 1 — KPI Panels</a>
+    <a class="nav-item" href="#task2"><div class="nav-num">6</div> Task 2 — Charts</a>
+    <a class="nav-item" href="#task3"><div class="nav-num">7</div> Task 3 — Map</a>
+    <a class="nav-item" href="#reference"><div class="nav-num">8</div> Query Reference</a>
+    <a class="nav-item" href="#troubleshoot"><div class="nav-num">9</div> Troubleshooting</a>
+    <a class="nav-item" href="#outcomes"><div class="nav-num">10</div> Outcomes</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- SECTION 0: OVERVIEW -->
+    <section class="section" id="overview">
+      <div class="section-header">
+        <div class="section-icon icon-blue">🌐</div>
+        <div>
+          <div class="section-title">Project Overview</div>
+          <div class="section-subtitle">What you will build</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:20px;">
+        In this project you will ingest Apache web server logs into Splunk and build a fully functional dashboard with 7 panels — KPI cards, bar charts, and a world map. By the end, your dashboard will look like the reference screenshot below.
+      </p>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num c-blue">2,000</div><div class="stat-label">Total Requests</div></div>
+        <div class="stat-card"><div class="stat-num c-green">1,168</div><div class="stat-label">Successful (200)</div></div>
+        <div class="stat-card"><div class="stat-num c-red">376</div><div class="stat-label">Client Errors (4xx)</div></div>
+        <div class="stat-card"><div class="stat-num c-amber">90</div><div class="stat-label">Server Errors (5xx)</div></div>
+      </div>
+
+      <div class="alert alert-info">
+        <div class="alert-icon">💡</div>
+        <div>All queries in this guide use <code>source="apache_logs.json"</code>. This is the filename of your uploaded dataset. Make sure you upload a file with exactly this name.</div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: PREREQ -->
+    <section class="section" id="prereq">
+      <div class="section-header">
+        <div class="section-icon icon-purple">🧰</div>
+        <div>
+          <div class="section-title">Prerequisites</div>
+          <div class="section-subtitle">What you need before starting</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Requirement</th><th>Details</th></tr></thead>
+          <tbody>
+            <tr><td>Splunk Enterprise</td><td>Version 10.x or higher (Free trial works fine)</td></tr>
+            <tr><td>Dataset</td><td><code>apache_logs.json</code> — Apache mixed access logs in JSON format</td></tr>
+            <tr><td>Splunk Role</td><td>Admin or Power User (needed to add data and create dashboards)</td></tr>
+            <tr><td>Browser</td><td>Chrome or Edge recommended for best Splunk compatibility</td></tr>
+            <tr><td>Machine Name</td><td>Know your computer's hostname — you will use it during data upload</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <div class="alert-icon">🖥️</div>
+        <div>
+          <strong>How to find your machine name:</strong><br>
+          <strong>Windows:</strong> Press <code>Win + R</code> → type <code>cmd</code> → type <code>hostname</code> and press Enter.<br>
+          <strong>Linux / Mac:</strong> Open Terminal → type <code>hostname</code> and press Enter.<br><br>
+          You will use this name instead of <code>webserver</code> when setting the Host field during data upload.
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: UPLOAD -->
+    <section class="section" id="upload">
+      <div class="section-header">
+        <div class="section-icon icon-amber">📤</div>
+        <div>
+          <div class="section-title">Step 2 — Upload Your Dataset</div>
+          <div class="section-subtitle">Getting apache_logs.json into Splunk</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warn">
+        <div class="alert-icon">⚠️</div>
+        <div><strong>Critical:</strong> When Splunk asks for a <strong>Host</strong> value during upload, do <u>NOT</u> type <code>webserver</code>. Enter <strong>your actual machine/computer name</strong> instead. Every query in this project uses <code>host="webserver"</code> as a placeholder — replace it with your hostname everywhere.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Open Splunk Web and go to Settings</div>
+            <div class="step-desc">In the top navigation bar, click <strong>Settings</strong> → then click <strong>Add Data</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Choose Upload method</div>
+            <div class="step-desc">On the "Add Data" page, click the <strong>Upload</strong> tile (the first option). This lets you upload a file from your computer.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Select your file</div>
+            <div class="step-desc">Click <strong>Select File</strong> and choose <code>apache_logs.json</code> from your computer. Click <strong>Next</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Set Source Type to _json</div>
+            <div class="step-desc">In the "Set Source Type" screen, search for and select <strong>_json</strong>. This tells Splunk the file is in JSON format. Click <strong>Next</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Set the Host field to YOUR machine name</div>
+            <div class="step-desc">In the "Input Settings" screen, find the <strong>Host</strong> field. Change it from the default value to <strong>your computer's hostname</strong>. Set Index to <code>main</code>. Click <strong>Review</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title">Submit and verify</div>
+            <div class="step-desc">Click <strong>Submit</strong>. Splunk will confirm the file is indexed. You can then click <strong>Start Searching</strong> to verify data is visible.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: CREATE DASHBOARD -->
+    <section class="section" id="dashboard">
+      <div class="section-header">
+        <div class="section-icon icon-blue">🗂️</div>
+        <div>
+          <div class="section-title">Step 3 — Create the Dashboard</div>
+          <div class="section-subtitle">Set up the blank canvas</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Go to Dashboards</div>
+            <div class="step-desc">Click <strong>Dashboards</strong> in the top navigation bar.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Create New Dashboard</div>
+            <div class="step-desc">Click the <strong>Create New Dashboard</strong> button (top right).</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Name and create</div>
+            <div class="step-desc">Enter the title: <code>Splunk Dashboard for Web Traffic Logs</code>. Select <strong>Classic Dashboards</strong>. Click <strong>Create</strong>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: TIME RANGE -->
+    <section class="section" id="time">
+      <div class="section-header">
+        <div class="section-icon icon-green">⏱️</div>
+        <div>
+          <div class="section-title">Task 0 — Time Range Filter</div>
+          <div class="section-subtitle">Shared time picker used by all panels</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:16px;">
+        Before adding any panels, set up a shared Time Range input. Every panel will reference this token so they all filter together when you change the time.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Enter Edit mode</div>
+            <div class="step-desc">Open your new dashboard and click the <strong>Edit</strong> button (top right corner).</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Add a Time input</div>
+            <div class="step-desc">Click <strong>+ Add Input</strong> at the top of the dashboard → Select <strong>Time</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Configure the time input</div>
+            <div class="step-desc">Click the <strong>pencil (✏️)</strong> icon on the Time input. Set <strong>Label</strong> to <code>Time Range</code> and <strong>Token</strong> to <code>time_range</code>. Click Apply.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Add a Submit button</div>
+            <div class="step-desc">Click <strong>+ Add Input</strong> again → Select <strong>Submit</strong>. This adds a button to apply the time filter.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-success">
+        <div class="alert-icon">✅</div>
+        <div>For every panel you create below, always set its <strong>Time</strong> field to use the shared token <code>$time_range$</code>. This ensures all panels filter together.</div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: TASK 1 -->
+    <section class="section" id="task1">
+      <div class="section-header">
+        <div class="section-icon icon-blue">📊</div>
+        <div>
+          <div class="section-title">Task 1 — KPI Summary Panels</div>
+          <div class="section-subtitle">Single Value panels showing key numbers at a glance</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:20px;">For each panel below: click <strong>+ Add Panel</strong> → <strong>New</strong> → <strong>Single Value</strong> → set Time to <code>$time_range$</code> → set the title → paste the query → click <strong>Apply</strong>.</p>
+
+      <div class="panel-grid">
+
+        <!-- Panel 1 -->
+        <div class="panel-card">
+          <div class="panel-type type-single">📌 Single Value</div>
+          <div class="panel-name">Total Web Activities</div>
+          <div class="panel-goal">Counts all events — every HTTP request in the log.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span> <span class="kw">sourcetype</span>=<span class="str">"_json"</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"Total Web Requests"</span></pre>
+          </div>
+          <div class="alert alert-warn" style="margin:8px 0 0;">
+            <div class="alert-icon">⚠️</div>
+            <div style="font-size:12px;">Replace <code>webserver</code> with your machine name.</div>
+          </div>
+        </div>
+
+        <!-- Panel 2 -->
+        <div class="panel-card">
+          <div class="panel-type type-single">📌 Single Value</div>
+          <div class="panel-name">Successful Responses</div>
+          <div class="panel-goal">Counts HTTP 200 GET requests — successful page loads.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span> <span class="kw">method</span>=<span class="val">GET</span> <span class="kw">status</span>=<span class="val">200</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"Successful Responses"</span></pre>
+          </div>
+        </div>
+
+        <!-- Panel 3 -->
+        <div class="panel-card">
+          <div class="panel-type type-single">📌 Single Value</div>
+          <div class="panel-name">Client Errors (4xx)</div>
+          <div class="panel-goal">Bad requests from the client side — 404 Not Found, 403 Forbidden, etc.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span>
+<span class="op">|</span> <span class="fn">where</span> status&gt;=<span class="val">400</span> <span class="kw">AND</span> status&lt;<span class="val">500</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"Client Errors"</span></pre>
+          </div>
+        </div>
+
+        <!-- Panel 4 -->
+        <div class="panel-card">
+          <div class="panel-type type-single">📌 Single Value</div>
+          <div class="panel-name">Server Errors (5xx)</div>
+          <div class="panel-goal">Server-side failures — 500 Internal Error, 503 Unavailable, etc.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span>
+<span class="op">|</span> <span class="fn">where</span> status&gt;=<span class="val">500</span> <span class="kw">AND</span> status&lt;<span class="val">600</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"Server Errors"</span></pre>
+          </div>
+          <div class="alert alert-danger" style="margin:8px 0 0;">
+            <div class="alert-icon">🐛</div>
+            <div style="font-size:12px;"><strong>Bug fix by Somesh:</strong> The original lab used <code>status&gt;=400</code> for 5xx — that's wrong. Use <code>status&gt;=500</code> to correctly count server errors only.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 6: TASK 2 -->
+    <section class="section" id="task2">
+      <div class="section-header">
+        <div class="section-icon icon-purple">📈</div>
+        <div>
+          <div class="section-title">Task 2 — Bar Chart Panels</div>
+          <div class="section-subtitle">Visualizing top URIs and top IP addresses</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:20px;">For each panel below: click <strong>+ Add Panel</strong> → <strong>New</strong> → <strong>Bar Chart</strong> → set Time to <code>$time_range$</code> → set the title → paste the query → click <strong>Apply</strong>.</p>
+
+      <div class="panel-grid">
+
+        <!-- Panel 5 -->
+        <div class="panel-card">
+          <div class="panel-type type-bar">📊 Bar Chart</div>
+          <div class="panel-name">Top Requested URIs</div>
+          <div class="panel-goal">Which pages/endpoints are hit the most? Shows top 20 URLs by request count.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"Hits"</span> <span class="kw">by</span> uri
+<span class="op">|</span> <span class="fn">sort</span> -Hits
+<span class="op">|</span> <span class="fn">head</span> <span class="val">20</span></pre>
+          </div>
+          <div class="alert alert-success" style="margin:8px 0 0;">
+            <div class="alert-icon">💡</div>
+            <div style="font-size:12px;"><strong>Added by Somesh:</strong> <code>| sort -Hits | head 20</code> limits to top 20 URIs so the chart stays readable.</div>
+          </div>
+        </div>
+
+        <!-- Panel 6 -->
+        <div class="panel-card">
+          <div class="panel-type type-bar">📊 Bar Chart</div>
+          <div class="panel-name">Top Users by IP Address</div>
+          <div class="panel-goal">Which IP addresses generate the most traffic? Shows top 20 IPs.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">SPL Query</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span>
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> AS <span class="str">"IP"</span> <span class="kw">by</span> ip
+<span class="op">|</span> <span class="fn">sort</span> -IP
+<span class="op">|</span> <span class="fn">head</span> <span class="val">20</span></pre>
+          </div>
+          <div class="alert alert-success" style="margin:8px 0 0;">
+            <div class="alert-icon">💡</div>
+            <div style="font-size:12px;"><strong>Added by Somesh:</strong> <code>| sort -IP | head 20</code> shows only the top 20 most active IPs.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 7: TASK 3 -->
+    <section class="section" id="task3">
+      <div class="section-header">
+        <div class="section-icon icon-green">🌍</div>
+        <div>
+          <div class="section-title">Task 3 — Geographic Map Panel</div>
+          <div class="section-subtitle">Choropleth world map of traffic by country</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:20px;">
+        This panel converts IP addresses into countries and colors a world map based on traffic volume per country. Click <strong>+ Add Panel</strong> → <strong>New</strong> → <strong>Choropleth Map</strong> → set Time to <code>$time_range$</code> → set title → paste query → click <strong>Apply</strong>.
+      </p>
+
+      <div class="panel-card full">
+        <div class="panel-type type-map">🗺️ Choropleth Map</div>
+        <div class="panel-name">Web Traffic by Client IP Addresses</div>
+        <div class="panel-goal">Uses Splunk's <code>iplocation</code> command to convert IPs into countries, then maps them geographically using <code>geom geo_countries</code>.</div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">SPL Query</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><span class="str">source="apache_logs.json"</span> <span class="kw">host</span>=<span class="str">"webserver"</span>
+<span class="kw">sourcetype</span>=<span class="str">"_json"</span> <span class="kw">method</span>=<span class="val">GET</span>
+<span class="op">|</span> <span class="fn">table</span> ip
+<span class="op">|</span> <span class="fn">iplocation</span> ip
+<span class="op">|</span> <span class="fn">stats</span> <span class="fn">count</span> <span class="kw">by</span> Country
+<span class="op">|</span> <span class="fn">geom</span> geo_countries <span class="kw">featureIdField</span>=<span class="str">"Country"</span></pre>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+              <tbody>
+                <tr><td><code>table ip</code></td><td>Keeps only the IP column, discards other fields</td></tr>
+                <tr><td><code>iplocation ip</code></td><td>Adds Country, City, Lat, Lon columns by looking up each IP</td></tr>
+                <tr><td><code>stats count by Country</code></td><td>Counts requests per country</td></tr>
+                <tr><td><code>geom geo_countries</code></td><td>Maps country names to polygon shapes for the choropleth map</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-warn" style="margin-top:16px;">
+        <div class="alert-icon">⚠️</div>
+        <div>The <code>geom</code> command requires Splunk Enterprise (not Free edition). It uses the built-in <strong>geo_countries</strong> lookup that ships with Splunk Enterprise 6.5+.</div>
+      </div>
+    </section>
+
+    <!-- SECTION 8: QUERY REFERENCE -->
+    <section class="section" id="reference">
+      <div class="section-header">
+        <div class="section-icon icon-amber">📋</div>
+        <div>
+          <div class="section-title">All Queries — Quick Reference</div>
+          <div class="section-subtitle">Copy-paste ready — just replace "webserver" with your hostname</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Panel Name</th><th>Type</th><th>Query (click to copy)</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Total Web Activities</td>
+              <td><span class="panel-type type-single" style="margin:0;font-size:10px;">Single</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" | stats count AS "Total Web Requests"</code></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Successful Responses</td>
+              <td><span class="panel-type type-single" style="margin:0;font-size:10px;">Single</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" method=GET status=200 | stats count AS "Successful Responses"</code></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>Client Errors (4xx)</td>
+              <td><span class="panel-type type-single" style="margin:0;font-size:10px;">Single</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" | where status>=400 AND status&lt;500 | stats count AS "Client Errors"</code></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Server Errors (5xx)</td>
+              <td><span class="panel-type type-single" style="margin:0;font-size:10px;">Single</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" | where status>=500 AND status&lt;600 | stats count AS "Server Errors"</code></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Top Requested URIs</td>
+              <td><span class="panel-type type-bar" style="margin:0;font-size:10px;">Bar Chart</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" | stats count AS "Hits" by uri | sort -Hits | head 20</code></td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td>Top Users by IP</td>
+              <td><span class="panel-type type-bar" style="margin:0;font-size:10px;">Bar Chart</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" | stats count AS "IP" by ip | sort -IP | head 20</code></td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td>Geographic Map</td>
+              <td><span class="panel-type type-map" style="margin:0;font-size:10px;">Map</span></td>
+              <td><code style="font-size:11px;">source="apache_logs.json" host="webserver" sourcetype="_json" method=GET | table ip | iplocation ip | stats count by Country | geom geo_countries featureIdField="Country"</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 9: TROUBLESHOOT -->
+    <section class="section" id="troubleshoot">
+      <div class="section-header">
+        <div class="section-icon icon-red">🐛</div>
+        <div>
+          <div class="section-title">Troubleshooting</div>
+          <div class="section-subtitle">Common issues and how to fix them</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Problem</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>No results in any panel</td>
+              <td><code>host=</code> doesn't match your machine name</td>
+              <td>Run <code>hostname</code> in your terminal and replace <code>webserver</code> with that value in every query</td>
+            </tr>
+            <tr>
+              <td>5xx panel shows same count as 4xx</td>
+              <td>Using wrong status filter</td>
+              <td>Make sure the 5xx query uses <code>status&gt;=500 AND status&lt;600</code>, not <code>status&gt;=400</code></td>
+            </tr>
+            <tr>
+              <td>Map panel shows no data</td>
+              <td><code>iplocation</code> lookup may be disabled</td>
+              <td>Go to Settings → Lookups and check that MaxMind GeoIP lookup is enabled</td>
+            </tr>
+            <tr>
+              <td><code>geom</code> command not recognized</td>
+              <td>Using Splunk Free edition</td>
+              <td>Upgrade to Splunk Enterprise — <code>geom</code> is not available in the free version</td>
+            </tr>
+            <tr>
+              <td>Bar charts show 0 or are empty</td>
+              <td>Dataset not indexed correctly</td>
+              <td>Go to Search and run: <code>source="apache_logs.json"</code> — if no results, re-upload the file and check sourcetype is <code>_json</code></td>
+            </tr>
+            <tr>
+              <td>Time filter not working</td>
+              <td>Token name mismatch</td>
+              <td>Verify the Time input token is exactly <code>time_range</code> (no spaces, lowercase)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 10: OUTCOMES -->
+    <section class="section" id="outcomes">
+      <div class="section-header">
+        <div class="section-icon icon-green">🎓</div>
+        <div>
+          <div class="section-title">Learning Outcomes</div>
+          <div class="section-subtitle">What you've learned after completing this project</div>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8; margin-bottom:16px;">After completing all tasks, you now understand how to:</p>
+
+      <div class="outcomes">
+        <div class="outcome-pill">Build Splunk dashboards from scratch</div>
+        <div class="outcome-pill">Upload & index JSON log files</div>
+        <div class="outcome-pill">Write SPL search queries</div>
+        <div class="outcome-pill">Use stats, where, sort commands</div>
+        <div class="outcome-pill">Create Single Value panels</div>
+        <div class="outcome-pill">Create Bar Chart visualizations</div>
+        <div class="outcome-pill">Build Choropleth Maps</div>
+        <div class="outcome-pill">Use iplocation & geom commands</div>
+        <div class="outcome-pill">Set up shared time range tokens</div>
+        <div class="outcome-pill">Differentiate 2xx / 4xx / 5xx HTTP codes</div>
+        <div class="outcome-pill">Identify top URIs and IPs</div>
+        <div class="outcome-pill">Analyze real Apache web server logs</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-top:24px;">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; font-weight:600;">Project Structure for GitHub</div>
+        <div class="folder">
+<span class="f-dir">splunk-web-traffic-dashboard/</span><br>
+│<br>
+├── <span class="f-file">README.md</span>             <span class="f-note">← Project overview and instructions</span><br>
+├── <span class="f-file">apache_logs.json</span>      <span class="f-note">← Your dataset file</span><br>
+├── <span class="f-file">splunk_dashboard_guide.html</span>  <span class="f-note">← This guide file</span><br>
+└── <span class="f-dir">queries/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">total_requests.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">successful_responses.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">client_errors.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">server_errors.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">top_uris.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="f-file">top_ips.spl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="f-file">geo_map.spl</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-name">✍️ Written by Somesh</div>
+  <div class="footer-sub">Splunk Web Traffic Dashboard Project · Built with Splunk Enterprise 10.2.2 · Apache Logs Dataset</div>
+  <div style="margin-top:12px; font-size:12px; color:#334155;">If this helped you, give the repo a ⭐ on GitHub · Open an Issue if you have questions</div>
+</div>
+
+<script>
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // Sidebar active state on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navItems = document.querySelectorAll('.nav-item');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    navItems.forEach(n => {
+      n.classList.toggle('active', n.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
